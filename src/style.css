@@ -167,6 +167,73 @@ body {
   height: 100%;
   pointer-events: none;
   transform: scaleX(-1);
+  z-index: 1;
+}
+
+.video-fail-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(8, 10, 14, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.video-fail-overlay.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.video-fail-inner {
+  max-width: 22rem;
+  text-align: center;
+  border: 1px solid rgba(255, 107, 107, 0.45);
+  border-radius: 14px;
+  padding: 1.1rem 1.15rem 1.2rem;
+  background: rgba(18, 22, 30, 0.94);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.video-fail-overlay.spoof-suspect .video-fail-inner {
+  border-color: rgba(255, 107, 107, 0.65);
+}
+
+.video-fail-overlay.general-fail .video-fail-inner {
+  border-color: rgba(240, 180, 41, 0.5);
+}
+
+.video-fail-icon {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.video-fail-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--danger);
+  line-height: 1.35;
+}
+
+.video-fail-overlay.general-fail .video-fail-title {
+  color: var(--warn);
+}
+
+.video-fail-reason {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .hud {
@@ -180,6 +247,7 @@ body {
   border-radius: 999px;
   font-size: 0.8rem;
   color: var(--muted);
+  z-index: 3;
 }
 
 .sidebar {

@@ -49,6 +49,13 @@
         <div class="video-wrap">
           <video id="video" playsinline muted autoplay></video>
           <canvas id="overlay" aria-hidden="true"></canvas>
+          <div id="videoFailOverlay" class="video-fail-overlay" hidden role="alert">
+            <div class="video-fail-inner">
+              <p class="video-fail-icon" aria-hidden="true">⛔</p>
+              <p id="videoFailTitle" class="video-fail-title"></p>
+              <p id="videoFailReason" class="video-fail-reason"></p>
+            </div>
+          </div>
           <div id="hud" class="hud" role="status"></div>
         </div>
         <div class="sidebar">

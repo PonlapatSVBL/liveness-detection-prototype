@@ -23,6 +23,9 @@ const challengeHint = document.querySelector('#challengeHint');
 const progressEl = document.querySelector('#progress');
 const resultEl = document.querySelector('#result');
 const hud = document.querySelector('#hud');
+const videoFailOverlay = document.querySelector('#videoFailOverlay');
+const videoFailTitle = document.querySelector('#videoFailTitle');
+const videoFailReason = document.querySelector('#videoFailReason');
 
 /** @type {FaceLandmarker | null} */
 let faceLandmarker = null;
@@ -341,6 +344,34 @@ function advanceStep() {
   progressEl.textContent = 'ขั้นตอน ' + (session.stepIndex + 1) + ' / ' + session.steps.length;
 }
 
+/** เหตุผลที่น่าจะเป็น “ไม่ใช่หน้าจริงหน้ากล้อง” — แสดงหัวข้อเตือนบนวิดีโอ */
+function isAuthenticitySuspectReason(reason) {
+  return (
+    /ตรวจพบ|ภาพพิมพ์|กระดาษ|จอแสดงผล|มือถือ|วิดีโอบีบอัด|หน้ากาก|วัตถุปลอม|เคลื่อนไหวบนใบหน้า|ภาพนิ่ง|หน้าจอนิ่ง|ใบหน้าเล็กเกินไป|พื้นผิวแบน/.test(
+      reason,
+    ) || /PAD|ลักษณะ/.test(reason)
+  );
+}
+
+function showVideoFailOverlay(reason) {
+  if (!videoFailOverlay || !videoFailTitle || !videoFailReason) return;
+  const suspect = isAuthenticitySuspectReason(reason);
+  videoFailOverlay.classList.toggle('spoof-suspect', suspect);
+  videoFailOverlay.classList.toggle('general-fail', !suspect);
+  videoFailTitle.textContent = suspect
+    ? 'ระบบไม่ยืนยันว่าเป็นหน้าคนจริงหน้ากล้อง'
+    : 'ไม่ผ่านการตรวจสอบ';
+  videoFailReason.textContent = reason;
+  videoFailOverlay.hidden = false;
+  videoFailOverlay.classList.add('is-visible');
+}
+
+function hideVideoFailOverlay() {
+  if (!videoFailOverlay) return;
+  videoFailOverlay.classList.remove('is-visible');
+  videoFailOverlay.hidden = true;
+}
+
 function failSession(reason) {
   running = false;
   session.type = '';
@@ -351,6 +382,7 @@ function failSession(reason) {
   hud.textContent = 'สถานะ: ล้มเหลว';
   btnStart.disabled = false;
   btnFileTest.disabled = false;
+  showVideoFailOverlay(reason);
 }
 
 padAccumulator = createPadAccumulator({
@@ -711,6 +743,7 @@ async function startWithVideoFile(file) {
 }
 
 function beginSession() {
+  hideVideoFailOverlay();
   resetAntiSpoof();
   resetSession();
   startNewSequence();
@@ -737,9 +770,11 @@ function stopCamera() {
   video.removeAttribute('src');
   video.load();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hideVideoFailOverlay();
 }
 
 btnStart.addEventListener('click', async () => {
+  hideVideoFailOverlay();
   resultEl.textContent = '';
   resultEl.className = 'result';
   try {
@@ -761,6 +796,7 @@ btnFileTest.addEventListener('click', () => fileVideo.click());
 fileVideo.addEventListener('change', async () => {
   const file = fileVideo.files?.[0];
   if (!file) return;
+  hideVideoFailOverlay();
   resultEl.textContent = '';
   resultEl.className = 'result';
   try {
