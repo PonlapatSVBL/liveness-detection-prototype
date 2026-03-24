@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Liveness — บนอุปกรณ์</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <h1>ตรวจสอบความมีชีวิต (Liveness)</h1>
+        <p class="subtitle">ประมวลผลบนเครื่องคุณ — ไม่ส่งวิดีโอไปเซิร์ฟเวอร์</p>
+      </header>
+
+      <section class="panel credentials">
+        <h2>ทำไมถึงปลอดภัยและต้นทุนต่ำ</h2>
+        <ul>
+          <li>โมเดลรันบน GPU/CPU ของเบราว์เซอร์ (MediaPipe บนอุปกรณ์)</li>
+          <li>ตรวจ <strong>การเคลื่อนไหว micro-motion</strong> บนใบหน้าต่อเนื่อง — ภาพพิมพ์นิ่งหรือหน้าจอนิ่งมักไม่ผ่าน</li>
+          <li>กระพริบตาต้องสอดคล้องทั้งรูปดวงตา (EAR) และ <strong>Face Blendshapes</strong> ของโมเดล (ลดรูปสองมิติ)</li>
+          <li>คำสั่งสุ่ม: ยิ้ม + กระพริบ + หันหน้า — ต้องทำต่อหน้ากล้องจริงในเซสชันนี้</li>
+          <li>
+            <span class="muted-strong">ข้อจำกัด:</span> วิดีโอเล่นบนจอหรือ deepfake อาจหลอกได้บางระดับ — การใช้งานจริงควรมี challenge จากเซิร์ฟเวอร์ + โมเดลตรวจ spoof เพิ่ม
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel controls">
+        <div class="controls-row">
+          <button type="button" id="btnStart" class="btn btn-primary">เริ่มด้วยกล้อง</button>
+          <button type="button" id="btnStop" class="btn" disabled>หยุด</button>
+          <span id="modelStatus" class="status">กำลังเตรียมโมเดล…</span>
+        </div>
+        <div class="controls-alt">
+          <button type="button" id="btnFileTest" class="btn">ทดสอบจากไฟล์วิดีโอ…</button>
+          <input type="file" id="fileVideo" accept="video/*" hidden />
+          <p class="controls-alt-hint">
+            เปิดจาก <strong>https://localhost:5173</strong> หลังรัน <code>npm run dev</code> (ครั้งแรกอาจต้องกดยอมรับใบรับรองชั่วคราว) — ห้ามใช้ลิงก์
+            <code>http:// IP ในเครือข่าย</code> ถ้าจะใช้กล้อง หรือใช้ปุ่มทดสอบจากไฟล์วิดีโอเมื่อไม่มีกล้อง
+          </p>
+        </div>
+      </section>
+
+      <section class="stage">
+        <div class="video-wrap">
+          <video id="video" playsinline muted autoplay></video>
+          <canvas id="overlay" aria-hidden="true"></canvas>
+          <div id="hud" class="hud" role="status"></div>
+        </div>
+        <div class="sidebar">
+          <div id="challengeBox" class="challenge-box">
+            <p class="label">ขั้นตอนปัจจุบัน</p>
+            <p id="challengeText" class="challenge-text">กด «เริ่มด้วยกล้อง» — ต้องเป็นหน้าจริงหน้ากล้อง</p>
+            <p id="challengeHint" class="hint"></p>
+          </div>
+          <div id="progress" class="progress" aria-live="polite"></div>
+          <p id="result" class="result" role="status"></p>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
