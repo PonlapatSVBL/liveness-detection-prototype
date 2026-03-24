@@ -7,68 +7,126 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div id="app">
-      <header class="header">
-        <h1>ตรวจสอบความมีชีวิต (Liveness)</h1>
-        <p class="subtitle">ประมวลผลบนเครื่องคุณ — ไม่ส่งวิดีโอไปเซิร์ฟเวอร์</p>
-      </header>
+    <nav class="mode-tabs" aria-label="โหมดการทำงาน">
+      <button type="button" class="mode-tab active" data-mode-tab="legacy">
+        แบบเดิม (challenge + PAD)
+      </button>
+      <button type="button" class="mode-tab" data-mode-tab="capture">โหมดใหม่ (Real/Spoof + มุม + จับภาพ)</button>
+    </nav>
 
-      <section class="panel credentials">
-        <h2>ทำไมถึงปลอดภัยและต้นทุนต่ำ</h2>
-        <ul>
-          <li>โมเดลรันบน GPU/CPU ของเบราว์เซอร์ (MediaPipe บนอุปกรณ์)</li>
-          <li>ตรวจ <strong>การเคลื่อนไหว micro-motion</strong> บนใบหน้าต่อเนื่อง — ภาพพิมพ์นิ่งหรือหน้าจอนิ่งมักไม่ผ่าน</li>
-          <li>กระพริบตาต้องสอดคล้องทั้งรูปดวงตา (EAR) และ <strong>Face Blendshapes</strong> ของโมเดล (ลดรูปสองมิติ)</li>
-          <li>คำสั่งสุ่ม: ยิ้ม + กระพริบ + หันหน้า — ต้องทำต่อหน้ากล้องจริงในเซสชันนี้</li>
-          <li>
-            <strong>PAD (เลเยอร์เพิ่ม):</strong> วิเคราะห์พื้นผิว/แพตเทิร์นจอ/บล็อกวิดีโอ/สัญญาณเสี่ยงขอบหน้ากาก — หลายเฟรมติดกันจึง fail (ลดสะดุ้งจากแสง)
-          </li>
-          <li>
-            <span class="muted-strong">ข้อจำกัด:</span> เป็น heuristic ไม่ใช่ CNN ฝึกมา — วิดีโอคุณภาพสูงหรือ deepfake อาจรอด; หน้ากากซิลิโคน RGB อย่างเดียวยากมาก ระดับธนาคารมักใช้โมเดล PAD + depth/IR
-          </li>
-        </ul>
-      </section>
+    <div id="legacyMode">
+      <div id="app">
+        <header class="header">
+          <h1>ตรวจสอบความมีชีวิต (Liveness)</h1>
+          <p class="subtitle">ประมวลผลบนเครื่องคุณ — ไม่ส่งวิดีโอไปเซิร์ฟเวอร์</p>
+        </header>
 
-      <section class="panel controls">
-        <div class="controls-row">
-          <button type="button" id="btnStart" class="btn btn-primary">เริ่มด้วยกล้อง</button>
-          <button type="button" id="btnStop" class="btn" disabled>หยุด</button>
-          <span id="modelStatus" class="status">กำลังเตรียมโมเดล…</span>
-        </div>
-        <div class="controls-alt">
-          <button type="button" id="btnFileTest" class="btn">ทดสอบจากไฟล์วิดีโอ…</button>
-          <input type="file" id="fileVideo" accept="video/*" hidden />
-          <p class="controls-alt-hint">
-            เปิดจาก <strong>https://localhost:5173</strong> หลังรัน <code>npm run dev</code> (ครั้งแรกอาจต้องกดยอมรับใบรับรองชั่วคราว) — ห้ามใช้ลิงก์
-            <code>http:// IP ในเครือข่าย</code> ถ้าจะใช้กล้อง หรือใช้ปุ่มทดสอบจากไฟล์วิดีโอเมื่อไม่มีกล้อง
+        <section class="panel credentials">
+          <h2>ทำไมถึงปลอดภัยและต้นทุนต่ำ</h2>
+          <ul>
+            <li>โมเดลรันบน GPU/CPU ของเบราว์เซอร์ (MediaPipe บนอุปกรณ์)</li>
+            <li>ตรวจ <strong>การเคลื่อนไหว micro-motion</strong> บนใบหน้าต่อเนื่อง — ภาพพิมพ์นิ่งหรือหน้าจอนิ่งมักไม่ผ่าน</li>
+            <li>กระพริบตาต้องสอดคล้องทั้งรูปดวงตา (EAR) และ <strong>Face Blendshapes</strong> ของโมเดล (ลดรูปสองมิติ)</li>
+            <li>คำสั่งสุ่ม: ยิ้ม + กระพริบ + หันหน้า — ต้องทำต่อหน้ากล้องจริงในเซสชันนี้</li>
+            <li>
+              <strong>PAD (เลเยอร์เพิ่ม):</strong> วิเคราะห์พื้นผิว/แพตเทิร์นจอ/บล็อกวิดีโอ/สัญญาณเสี่ยงขอบหน้ากาก — หลายเฟรมติดกันจึง fail (ลดสะดุ้งจากแสง)
+            </li>
+            <li>
+              <span class="muted-strong">ข้อจำกัด:</span> เป็น heuristic ไม่ใช่ CNN ฝึกมา — วิดีโอคุณภาพสูงหรือ deepfake อาจรอด; หน้ากากซิลิโคน RGB อย่างเดียวยากมาก ระดับธนาคารมักใช้โมเดล PAD + depth/IR
+            </li>
+          </ul>
+        </section>
+
+        <section class="panel controls">
+          <div class="controls-row">
+            <button type="button" id="btnStart" class="btn btn-primary">เริ่มด้วยกล้อง</button>
+            <button type="button" id="btnStop" class="btn" disabled>หยุด</button>
+            <span id="modelStatus" class="status">กำลังเตรียมโมเดล…</span>
+          </div>
+          <div class="controls-alt">
+            <button type="button" id="btnFileTest" class="btn">ทดสอบจากไฟล์วิดีโอ…</button>
+            <input type="file" id="fileVideo" accept="video/*" hidden />
+            <p class="controls-alt-hint">
+              เปิดจาก <strong>https://localhost:5173</strong> หลังรัน <code>npm run dev</code> (ครั้งแรกอาจต้องกดยอมรับใบรับรองชั่วคราว) — ห้ามใช้ลิงก์
+              <code>http:// IP ในเครือข่าย</code> ถ้าจะใช้กล้อง หรือใช้ปุ่มทดสอบจากไฟล์วิดีโอเมื่อไม่มีกล้อง
+            </p>
+          </div>
+        </section>
+
+        <section class="stage">
+          <div class="video-wrap">
+            <video id="video" playsinline muted autoplay></video>
+            <canvas id="overlay" aria-hidden="true"></canvas>
+            <div id="videoFailOverlay" class="video-fail-overlay" hidden role="alert">
+              <div class="video-fail-inner">
+                <p class="video-fail-icon" aria-hidden="true">⛔</p>
+                <p id="videoFailTitle" class="video-fail-title"></p>
+                <p id="videoFailReason" class="video-fail-reason"></p>
+              </div>
+            </div>
+            <div id="hud" class="hud" role="status"></div>
+          </div>
+          <div class="sidebar">
+            <div id="challengeBox" class="challenge-box">
+              <p class="label">ขั้นตอนปัจจุบัน</p>
+              <p id="challengeText" class="challenge-text">กด «เริ่มด้วยกล้อง» — ต้องเป็นหน้าจริงหน้ากล้อง</p>
+              <p id="challengeHint" class="hint"></p>
+            </div>
+            <div id="progress" class="progress" aria-live="polite"></div>
+            <p id="result" class="result" role="status"></p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="captureMode" hidden>
+      <div id="captureApp">
+        <header class="header">
+          <h1>โหมดจับภาพใบหน้า (Real / Spoof)</h1>
+          <p class="subtitle">แสดงวง Real/Spoof แบบต่อเนื่อง → หมุนหน้าให้ครบมุม → จับภาพ (ยังไม่ส่งเซิร์ฟเวอร์)</p>
+        </header>
+
+        <section class="panel">
+          <p class="capture-intro">
+            ระบบใช้ PAD + micro-motion เหมือนโหมดเดิม (แบบย่อ) ถ้าเป็นใบหน้าจริงจะขึ้นวง <strong class="ok-inline">Real</strong> ถ้าสงสัยว่าเป็นรูป/จอ/วิดีโอจะขึ้น
+            <strong class="danger-inline">Spoof</strong> จากนั้นให้หมุนหน้า <strong>ตรง · ซ้าย · ขวา · เงย · ก้ม</strong> จนหลอดครบ 100% แล้วจะจับภาพแสดงด้านล่าง
           </p>
-        </div>
-      </section>
+          <div class="controls-row">
+            <button type="button" id="btnCapStart" class="btn btn-primary">เริ่มกล้อง</button>
+            <button type="button" id="btnCapStop" class="btn" disabled>หยุด</button>
+            <span id="capModelStatus" class="status">รอเริ่ม…</span>
+          </div>
+        </section>
 
-      <section class="stage">
-        <div class="video-wrap">
-          <video id="video" playsinline muted autoplay></video>
-          <canvas id="overlay" aria-hidden="true"></canvas>
-          <div id="videoFailOverlay" class="video-fail-overlay" hidden role="alert">
-            <div class="video-fail-inner">
-              <p class="video-fail-icon" aria-hidden="true">⛔</p>
-              <p id="videoFailTitle" class="video-fail-title"></p>
-              <p id="videoFailReason" class="video-fail-reason"></p>
+        <section class="stage">
+          <div class="video-wrap">
+            <video id="videoCap" playsinline muted autoplay></video>
+            <canvas id="canvasCap" aria-hidden="true"></canvas>
+            <div id="capHud" class="hud" role="status"></div>
+          </div>
+          <div class="sidebar">
+            <div class="challenge-box">
+              <p class="label">สถานะ</p>
+              <p id="capHint" class="challenge-text">กด «เริ่มกล้อง»</p>
+              <p id="capRotationHint" class="hint"></p>
+            </div>
+            <div class="rotation-progress-wrap rotation-progress-wrap--on-canvas">
+              <p class="label">ความครบของมุมมอง (แสดงเป็นวงบนวิดีโอ)</p>
+              <div class="rotation-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="rotationProgressFill" class="rotation-progress-fill"></div>
+              </div>
+              <p id="rotationPercent" class="rotation-percent">0%</p>
+            </div>
+            <p id="capResult" class="result" role="status"></p>
+            <div class="capture-preview-wrap">
+              <p class="label">ภาพที่จับได้ (แสดงในเบราว์เซอร์เท่านั้น)</p>
+              <img id="capturePreviewImg" class="capture-preview-img" alt="ตัวอย่างใบหน้าที่จับ" hidden />
             </div>
           </div>
-          <div id="hud" class="hud" role="status"></div>
-        </div>
-        <div class="sidebar">
-          <div id="challengeBox" class="challenge-box">
-            <p class="label">ขั้นตอนปัจจุบัน</p>
-            <p id="challengeText" class="challenge-text">กด «เริ่มด้วยกล้อง» — ต้องเป็นหน้าจริงหน้ากล้อง</p>
-            <p id="challengeHint" class="hint"></p>
-          </div>
-          <div id="progress" class="progress" aria-live="polite"></div>
-          <p id="result" class="result" role="status"></p>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

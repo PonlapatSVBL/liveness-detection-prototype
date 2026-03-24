@@ -8,9 +8,14 @@ const PAD_SIZE = 128;
 /** ต้องตรวจพบแบบเดียวกันติดกันกี่เฟรมก่อน fail (ลดสะดุ้งจากแสง) */
 export const PAD_CONSECUTIVE_FRAMES = 7;
 
-/** Laplacian variance ต่ำมาก = พื้นผิวแบน (กระดาษ/พิมพ์) */
-const LAP_VAR_PRINT_MAX = 18;
-const LOCAL_NOISE_PRINT_MAX = 2.2;
+/** ภาพพิมพ์/รูปถ่าย: พื้นผิวละเอียดน้อย (Laplacian + variance เทา) + micro-chroma แบน */
+const LAP_VAR_PRINT_STRICT = 22;
+const LAP_VAR_PRINT_LOOSE = 38;
+const LOCAL_NOISE_PRINT_MAX = 3.6;
+const LAP_MEAN_PRINT_MAX = 9;
+const GRAY_VAR_PRINT_MAX = 130;
+const GRAY_VAR_PRINT_TIGHT = 88;
+const CHROMA_SPREAD_PRINT_MAX = 21;
 
 /** แพตเทิร์นจอ: แถบแนวตั้ง / ความสม่ำเสมอของแถว */
 const ROW_UNIFORMITY_SCREEN = 0.92;
@@ -43,6 +48,16 @@ export function analyzePad(imageData) {
   const lapMean = mean(lap);
 
   const localNoise = estimateLocalNoise(gray, w, h);
+  const grayVar = variance(gray);
+
+  let chromaSpread = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
+    chromaSpread += Math.abs(r - g) + Math.abs(g - b);
+  }
+  chromaSpread /= n * 2;
 
   const rowMeans = rowMeansArr(gray, w, h);
   const rowUniformity = rowMeans.length > 2 ? 1 - coefficientOfVariation(rowMeans) : 0;
@@ -62,20 +77,30 @@ export function analyzePad(imageData) {
   const { centerStd, edgeGradRatio } = maskSkinSignals(gray, w, h);
 
   const printLike =
-    lapVar < LAP_VAR_PRINT_MAX && localNoise < LOCAL_NOISE_PRINT_MAX && lapMean < 6;
+    (lapVar < LAP_VAR_PRINT_STRICT - 5 &&
+      localNoise < LOCAL_NOISE_PRINT_MAX - 0.35 &&
+      lapMean < LAP_MEAN_PRINT_MAX - 1.2) ||
+    (lapVar < LAP_VAR_PRINT_LOOSE - 3 &&
+      grayVar < GRAY_VAR_PRINT_MAX - 12 &&
+      localNoise < 3.9) ||
+    (grayVar < GRAY_VAR_PRINT_TIGHT - 8 && lapVar < 40 && localNoise < 4.2) ||
+    (chromaSpread < CHROMA_SPREAD_PRINT_MAX - 2 &&
+      lapVar < 30 &&
+      localNoise < 3.8 &&
+      grayVar < 148);
 
   const screenLike =
-    (rowUniformity > ROW_UNIFORMITY_SCREEN && blueBiasFrac > SCREEN_BLUE_BIAS_FRAC) ||
-    (rowUniformity > 0.88 && blueBiasFrac > 0.45);
+    (rowUniformity > ROW_UNIFORMITY_SCREEN + 0.02 && blueBiasFrac > SCREEN_BLUE_BIAS_FRAC + 0.04) ||
+    (rowUniformity > 0.9 && blueBiasFrac > 0.48);
 
   const videoBlockLike =
     blockMeanVar > BLOCK_MEAN_VAR_MIN && intraAvg < INTRA_BLOCK_VAR_MAX && lapVar < 120;
 
   const maskSuspect =
-    centerStd < CENTER_PATCH_STD_MAX &&
-    edgeGradRatio > EDGE_TO_CENTER_GRAD_RATIO_MIN &&
-    lapVar > 25 &&
-    lapVar < 200;
+    centerStd < CENTER_PATCH_STD_MAX - 0.6 &&
+    edgeGradRatio > EDGE_TO_CENTER_GRAD_RATIO_MIN + 0.35 &&
+    lapVar > 28 &&
+    lapVar < 190;
 
   return {
     printLike,
@@ -84,6 +109,8 @@ export function analyzePad(imageData) {
     maskSuspect,
     debug: {
       lapVar: round2(lapVar),
+      grayVar: round2(grayVar),
+      chromaSp: round2(chromaSpread),
       localNoise: round2(localNoise),
       rowUniformity: round2(rowUniformity),
       blueBiasFrac: round2(blueBiasFrac),

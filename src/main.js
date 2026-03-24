@@ -1,5 +1,6 @@
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { analyzePad, createPadAccumulator, getPadCanvasSize } from './padLayer.js';
+import { initCaptureMode, destroyCaptureMode } from './faceCaptureMode.js';
 
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
@@ -831,6 +832,26 @@ btnStop.addEventListener('click', () => {
 loadModel().catch((e) => {
   console.error(e);
   modelStatus.textContent = 'โหลดโมเดลไม่สำเร็จ: ' + (e?.message || String(e));
+});
+
+document.querySelectorAll('[data-mode-tab]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.modeTab;
+    const legacyEl = document.getElementById('legacyMode');
+    const captureEl = document.getElementById('captureMode');
+    if (!legacyEl || !captureEl) return;
+    legacyEl.hidden = mode !== 'legacy';
+    captureEl.hidden = mode !== 'capture';
+    document.querySelectorAll('[data-mode-tab]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.modeTab === mode);
+    });
+    if (mode === 'legacy') {
+      destroyCaptureMode();
+    } else {
+      stopCamera();
+      initCaptureMode();
+    }
+  });
 });
 
 if (import.meta.env.PROD) {
