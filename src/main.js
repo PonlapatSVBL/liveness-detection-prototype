@@ -1,4 +1,5 @@
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import { analyzePad, createPadAccumulator, getPadCanvasSize } from './padLayer.js';
 
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
@@ -71,6 +72,8 @@ const ChallengeType = {
 
 const analyzeCanvas = document.createElement('canvas');
 const actx = analyzeCanvas.getContext('2d', { willReadFrequently: true });
+const padCanvas = document.createElement('canvas');
+const padCtx = padCanvas.getContext('2d', { willReadFrequently: true });
 
 /** @type {Uint8Array | null} */
 let prevFaceGray = null;
@@ -98,12 +101,16 @@ function buildChallengeSequence() {
   return shuffle(base);
 }
 
+/** @type {ReturnType<typeof createPadAccumulator> | null} */
+let padAccumulator = null;
+
 function resetAntiSpoof() {
   prevFaceGray = null;
   lowMotionMs = 0;
   prevAntiSpoofT = 0;
   blinkMaxBlendDuringClose = 0;
   liveSessionStartedAt = performance.now();
+  padAccumulator?.reset();
 }
 
 /** @type {{ type: string, steps: string[], stepIndex: number, blinkCount: number, lastBlinkAt: number, stepStarted: number, yawHoldStart: number | null, lastYawOk: boolean }} */
@@ -346,6 +353,10 @@ function failSession(reason) {
   btnFileTest.disabled = false;
 }
 
+padAccumulator = createPadAccumulator({
+  onFail: (msg) => failSession(msg),
+});
+
 /** @type {{ below: boolean }} */
 const blinkState = { below: false };
 
@@ -513,6 +524,25 @@ function loop() {
       }
 
       const box = faceBoundingBoxPixels(lm, w, h);
+
+      const ps = getPadCanvasSize();
+      padCanvas.width = ps;
+      padCanvas.height = ps;
+      padCtx.drawImage(video, box.sx, box.sy, box.sw, box.sh, 0, 0, ps, ps);
+      const padImg = padCtx.getImageData(0, 0, ps, ps);
+      const padResult = analyzePad(padImg);
+      if (padAccumulator.feed(padResult)) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+      const padDbg =
+        ' |PAD L' +
+        padResult.debug.lapVar +
+        ' rU' +
+        padResult.debug.rowUniformity +
+        ' b' +
+        padResult.debug.blueBiasFrac;
+
       const { meanDiff } = updateFaceMotionMean(video, box);
       tickAntiSpoof(now, meanDiff);
       if (!running) {
@@ -542,13 +572,15 @@ function loop() {
           ' | กระพริบ ' +
           session.blinkCount +
           '/' +
-          BLINK_REQUIRED;
+          BLINK_REQUIRED +
+          padDbg;
       } else if (session.type === ChallengeType.SMILE) {
         processSmileStep(now, scores);
         const sm = scores
           ? (((scores.mouthSmileLeft ?? 0) + (scores.mouthSmileRight ?? 0)) / 2).toFixed(2)
           : '—';
-        hud.textContent = 'm ε~' + meanDiff.toFixed(1) + ' | ยิ้ม~' + sm + ' (เกณฑ์ > ' + SMILE_SCORE + ')';
+        hud.textContent =
+          'm ε~' + meanDiff.toFixed(1) + ' | ยิ้ม~' + sm + ' (เกณฑ์ > ' + SMILE_SCORE + ')' + padDbg;
       } else if (session.type === ChallengeType.HEAD_LEFT) {
         processHeadStep(now, mirroredYaw, true);
         hud.textContent =
@@ -558,7 +590,8 @@ function loop() {
           mirroredYaw.toFixed(2) +
           ' | ค้าง ' +
           Math.round(YAW_HOLD_MS) +
-          ' ms';
+          ' ms' +
+          padDbg;
       } else if (session.type === ChallengeType.HEAD_RIGHT) {
         processHeadStep(now, mirroredYaw, false);
         hud.textContent =
@@ -568,7 +601,8 @@ function loop() {
           mirroredYaw.toFixed(2) +
           ' | ค้าง ' +
           Math.round(YAW_HOLD_MS) +
-          ' ms';
+          ' ms' +
+          padDbg;
       } else {
         hud.textContent = 'เสร็จแล้ว';
       }
@@ -693,6 +727,7 @@ function stopCamera() {
   cancelAnimationFrame(rafId);
   prevFaceGray = null;
   lowMotionMs = 0;
+  padAccumulator?.reset();
   if (stream) {
     stream.getTracks().forEach((t) => t.stop());
     stream = null;
